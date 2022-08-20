@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState, useContext } from "react";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
@@ -9,6 +9,9 @@ import instaLogo from "../Assets/Instagram.JPG";
 import { createUseStyles } from "react-jss";
 import Alert from "@mui/material/Alert";
 import TextField from "@mui/material/TextField";
+import { Link } from "react-router-dom";
+import { database, storage } from "../firebase";
+import { AuthContext } from "../Context/AuthContext";
 
 export default function SignUp() {
 	const useStyles = createUseStyles({
@@ -29,6 +32,66 @@ export default function SignUp() {
 
 	const classes = useStyles();
 
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [name, setName] = useState("");
+	const [file, setFile] = useState(null);
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	const { signup } = useContext(AuthContext);
+
+	const handleClick = async () => {
+		if (file == null) {
+			setError("Profile picture not uploaded");
+
+			setTimeout(() => {
+				setError("");
+			}, 3000);
+			return;
+		}
+
+		try {
+			let userObj = await signup(email, password);
+			let uid = userObj.user.uid;
+
+			const uploadImage = storage
+				.ref(`/users/${uid}/ProfileImage`)
+				.put(file);
+
+			uploadImage.on("state_changed", fn1, fn2, fn3);
+
+			function fn1(snapshot) {
+				let progress =
+					(snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+				console.log(`upload is ${progress} complete`);
+			}
+
+			function fn2() {
+				setError(error);
+				setTimeout(() => {
+					setError("");
+				}, 3000);
+				setLoading(false);
+				return;
+			}
+
+			function fn3() {
+				uploadImage.snapshot.ref.getDownloadURL().then((url) => {
+					database.users.doc(uid).set({
+						email: email,
+						userId: uid,
+						fullname: name,
+						profileUrl: url,
+						createdAt: database.getTimestamp(),
+					});
+				});
+			}
+		} catch (err) {
+			setError(err.message);
+		}
+	};
+
 	return (
 		<div className="signupWrapper">
 			<div className="signupCard">
@@ -40,11 +103,7 @@ export default function SignUp() {
 						<Typography variant="subtitle1" className={classes.text1}>
 							Sign up to see photos and videos from your friends
 						</Typography>
-						{true && (
-							<Alert severity="error">
-								This is an error alert — check it out!
-							</Alert>
-						)}
+						{error != "" && <Alert severity="error">{error}</Alert>}
 
 						<TextField
 							id="outlined-basic"
@@ -53,6 +112,8 @@ export default function SignUp() {
 							margin="dense"
 							fullWidth="true"
 							size="small"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
 						/>
 
 						<TextField
@@ -62,6 +123,8 @@ export default function SignUp() {
 							margin="dense"
 							fullWidth="true"
 							size="small"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
 						/>
 
 						<TextField
@@ -71,6 +134,8 @@ export default function SignUp() {
 							margin="dense"
 							fullWidth="true"
 							size="small"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
 						/>
 
 						<Button
@@ -81,7 +146,12 @@ export default function SignUp() {
 							className={classes.buttonmargin}
 						>
 							Upload Profile Picture
-							<input type="file" accept="image/*" hidden />
+							<input
+								type="file"
+								accept="image/*"
+								hidden
+								onChange={(e) => setFile(e.target.files[0])}
+							/>
 						</Button>
 
 						<Typography variant="subtitle1" className={classes.text1}>
@@ -90,7 +160,12 @@ export default function SignUp() {
 						</Typography>
 					</CardContent>
 					<CardActions>
-						<Button variant="contained" fullWidth="true">
+						<Button
+							variant="contained"
+							fullWidth="true"
+							onClick={handleClick}
+							disable={loading}
+						>
 							SignUp
 						</Button>
 					</CardActions>
@@ -98,7 +173,10 @@ export default function SignUp() {
 
 				<Card sx={{ maxWidth: 345 }}>
 					<Typography className={classes.card2}>
-						Have an Account? Log in
+						Have an Account?{" "}
+						<Link to="/login" style={{ textDecoration: "none" }}>
+							Log in
+						</Link>
 					</Typography>
 				</Card>
 			</div>

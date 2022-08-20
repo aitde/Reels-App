@@ -1,0 +1,23 @@
+.loginWrapper{
+    display: flex;
+    justify-content: center;
+}
+
+.loginCard{
+    width: 27vw;
+    margin-top: 5%;
+}
+
+.img-car{
+    height: 590px;
+    width: 441px;
+    position: relative;
+}
+
+.car{
+    position: absolute;
+    height: 423px;
+    width: 241px;
+    left: 143px;
+    top: 93px;
+}
